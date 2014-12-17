@@ -1,0 +1,317 @@
+---
+title: "Data_Mining"
+author: "Kameni"
+date: "Tuesday, December 16, 2014"
+output: html_document
+---
+<https://www.youtube.com/watch?v=6jT6Rit_5EQ>
+
+```{r}
+
+#install.packages('RGtk2')
+#install.packages('cairoDevice') 
+library(rattle)
+library(RGtk2)
+library(cairoDevice)
+
+```
+
+READ IN THE DATA  WE WILL BE WORKING WITH
+Read in the weather dataset from the disc
+```{r}
+name<-"weather.csv"
+dataDir<-"C:/Users/kameni/Documents/R/win-library/3.1/rattle/csv"
+file<-file.path(dataDir,name)
+weather<-read.csv(file)
+```
+
+visualize the data
+```{r}
+str(weather)
+summary(weather)
+```
+
+
+Look at the file in the RPE editor
+```{r}
+view(weather)
+```
+
+
+Simplify the weather dataset
+```{r}
+weather<-weather[,-c(1,2)]
+```
+
+
+get a numerical summary
+```{r}
+summary(weather)
+library(Hmisc);describe(weather)
+```
+
+
+Look at the target variable(barplot)
+the 'gplots' package provides the 'barplot2' function. we Have to genera the summary for plotting.
+
+```{r}
+library(gplots)
+ds<-summary(weather$RainTomorrow)
+#plot the date
+bp<- barplot2(ds, 
+              beside=T,
+              ylab="Frequency",
+              xlab="RainTomorrow")
+# add the actual frequencies
+text(bp,ds+9,ds)
+```
+
+
+
+plot the distributions of some variables
+look at all the piece that make a plot
+
+```{r}
+#install.packages('colorspace')
+library(colorspace) # we want to use the 'rainbow_hcl' function
+hs<-hist(weather$Sunshine,main="",
+         xlab="Sunshine",ylab="Frequency",
+         col="grey",ylim=c(0,90),
+         breaks="fd",border=T)
+dens<-density(weather$Sunshine,na.rm=T)
+rs<-max(hs$counts)/max(dens$y)
+lines(dens$x,dens$y*rs,type="l",col=rainbow_hcl(1)[1])
+rug(weather$sunshine) # add a rug to the plot
+title(main=paste("Distribution of","sunshine"))# add a title to the plot
+```
+
+Little function to draww multiple histograms
+Example of who you can strin function together in R
+```{r}
+jplot<-function(var){
+      hs<-hist(eval(parse(text=var)),main="",
+            xlab=var,ylab="Frequency",
+            col="grey",ylim=c(0,90),
+            breaks="fd",border=T)
+      dens<-density(eval(parse(text=var)),na.rm=T)
+      rs<-max(hs$counts)/max(dens$y)
+      lines(dens$x,dens$y*rs,type="l",col=rainbow_hcl(1)[1])
+      rug(eval(parse(text=var)))
+       # add a rug to the plot
+      title(main=paste("Distribution of",var))# add a title to the plot      
+}
+```
+
+
+call a custom function that does 4 plots
+
+```{r}
+attach(weather)
+# plot some distributions using a custom function jplot
+par(mfrow=c(2,2))
+v<-c("Sunshine","WindGustSpeed","WindSpeed9am","WindSpeed3pm")
+
+lapply(v,jplot)
+detach(weather)
+```
+
+Look at correlations
+the 'ellipse' package provides the 'plotcorr' function
+Correlation work for numeric variables only
+
+```{r}
+numeric<-c("MinTemp","MaxTemp","Rainfall","Evaporation","Sunshine","WindGustSpeed","WindSpeed9am","WindSpeed3pm","Humidity9am","Humidity3pm","Pressure9am","Pressure3pm","Cloud9am","Cloud3pm","Temp9am","Temp3pm")
+
+cor<-cor(weather[,numeric],use="pairwise",method="pearson")
+```
+
+Graphically display the correlations
+
+```{r}
+#install.packages("ellipse")
+library(ellipse)
+par(mfrow=c(1,1))
+plotcorr(cor,col=colorRampPalette(c("red","white","blue"))(11)[5*cor+6])
+
+title(main="Correlation weather.csv using Pearson",
+      sub=paste(format(Sys.time(),"%Y-%b-%d %H:%M:%S"),Sys.info()["user"]))
+```
+
+#Chapter: Kmeans
+
+look at means cluster
+kmeans work on numeric variables
+First we build a data frame with only the numeric variables
+```{r}
+numvars<-lapply(weather,is.numeric))
+numdata<-na.omit(weather[,numvars==T])
+head(numdata)
+```
+
+run the kmean algorithm
+```{r}
+km<-kmeans(x=numdata,centers=10)
+```
+
+plot the first 5 variables colored by cluster
+```{r}
+vars<-1:5
+plot(numdata[vars],col=km$cluster)
+title(main="weather",
+      sub=paste(format(Sys.time(),"%Y-%b-%d %H:%M:%S"),Sys.info()["user"]))
+
+```
+
+Note in the plot "left" variable is on the y axis
+Note in the plot "under" variable is on the  axis
+
+# Hierarchical clustering
+
+Function to produce a hierarchical correlation plot
+Follows code on page 135 of Data Minig with Rattle and R
+Note that int the plot shorter lengths correspond to higher correlations
+```{r}
+cc<- cor(numdata,use="pairwise",method="pearson")# compute distance
+hc<-hclust(dist(cc),method="average") # run the hclust
+```
+
+Produce a basic plot
+```{r}
+dn<-as.dendrogram(hc)
+```
+
+plot(dn,horiz=TRUE)
+produce a fancier plot
+```{r}
+op<-par(mar=c(3,4,3,4.29))
+plot(dn,horitz=TRUE,nodePar=list(col=3:2,cex=c(2.0,0.75),
+     pch=21:22,bg=c("light blue","pink"),lab.cex=0.75,
+     lab.col="tomato"),
+     edgePar=list(col="grey",lwd=2),xlab="Height")
+   title(main="Correlation Clusters using Pearson method")
+   sub=paste(format(Syst.time(),"%Y-%b-%d %H:%M:%S"))
+par(op)
+```
+
+
+# TREE MODEL WITH RPART
+
+Algorithm based on recusirve partitioning
+See section 11.2 of Data Mining with Rattle and by Williams
+Partition the data set according to some criterion of "best" partition
+Do the same for each of the two new subsets
+Once a partition is made, stick with it(greedy approach)
+Measures of "best" partition:
+      (1) information gain (the default)
+      (2) Gini
+Information Gain Algorithm
+For allpossible splits(partitions)
+  Split data, D, into to subsets S1 and S2 whre D = S1 U s2
+  Calculate information I1 and I2 associated with S1 and S2
+  Compute total information of split: 
+        Info(D,S1,S2) =(|D1|/D)*I1 + (|D2|/|D|)*I2
+  compute the information gain of the split:
+        Info(D) - Info(D,S1,S2)   
+  Select split greatest information gain
+  
+  
+ *The following code assumes that the weather data has been read in*
+ select variable for the model
+```{r}
+data<-subset(weather,select=c(MinTemp:RainToday,RainTomorrow))
+
+``` 
+ 
+ select a subset for training
+ 
+```{r}
+set.seed(42)
+N<-nrow(data)
+train<-sample(N,0.7*N) # Pick out observations for training
+test<-setdiff(setdiff(seq_len(N),train),train) #Observations
+```
+
+Build a classication tree
+```{r}
+#install.packages("rpart")
+library(rpart)
+form<-formula(RainTomorrow~.) # describe the model to R
+model<-rpart(formula = form,data=data[train,]) # build the model
+```
+
+
+plot the Tree
+Rattle style plot
+```{r}
+drawTreeNodes(model)   # from Rattle
+title(main="Decision Tree weather.csv  RainTomorrow",
+      sub=paste(format(Sys.time(),"%Y-%b-%d %H:%M:%S"),Sys.info()["user"]))
+      
+```
+
+
+str(model)
+printcp(model)   'from rpart'
+```{r}
+summary(model)
+```
+
+find out in which leaf each observation ended up
+```{r}
+leaf<-model$where
+leaf
+```
+
+Evaluate performance
+Run the tree model on the validate set
+```{r}
+pr<-predict(model,weather[test,],type="class")
+```
+
+Generate the confusion matrix
+```{r}
+AP<- c("Actual","Predicted") #row names fo CM,
+CM<-table(weather[test,]$RainTomorrow,pr,dnn=AP)
+CMpct<-round(CM/length(pr),2) # CM %
+```
+
+Helper function to calculate overal error
+```{r}
+overall<-function(x){
+      if(nrow(x)==2)
+            oe<- (x[1,2]+ x[2,1])/sum(x)
+      else
+            oe<- 1-(x[1,rownames(x)])/sum(x)
+      return(oe)
+}
+
+oe<- overall(CM)  # overall error
+CM;CMpct;oe
+```
+
+###ROC curve require the ROCR package
+Generate an ROC Curve for the model on weather.csv [validate].
+
+Get vector RainTomorrow in validate data set
+```{r}
+install.packages("ROCR")
+library(ROCR)
+RT<- weather[test,]$RainTomorrow
+prRT<-as.vector(as.integer(pr))
+pred<-prediction(predictions=prRT, labels=RT) # prediction is a function from the ROCR package
+```
+
+plotting the ROC Curve
+```{r}
+plot(performance(pred,"tpr","fpr"),col="#CC0000FF",lty=1,lwd=2,add=F)
+  #fpr:False positive rate.p(Yhat=+|Y=-). estimated as FP/N
+  #tpr:True positive rate.p(Yhat=+|Y=+). estimated as TP/P
+segments(0,0,1,1,col="blue",lwd=2)
+#Add legend to the plot
+legend("bottomright",c("tree.m"),col=rainbow(1,1,.8),lty=1:1,title="Models",inset=c(0.05,0.05))
+#Add decorations to the plot
+ title(main="ROC Curve forweather test set]",
+       sub=paste(format(Sys.time(), "%Y-%b-%d %H:%M:%S"),Sys.info()["user"]))
+```
+
+
