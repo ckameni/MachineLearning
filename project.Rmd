@@ -1,0 +1,101 @@
+---
+title: "Project"
+author: "Kameni"
+date: "Sunday, December 21, 2014"
+output: word_document
+---
+```{r}
+Sys.setlocale(category = "LC_TIME", locale="English")
+
+time <- format(Sys.time(),"%a, %b %d %Y, %X")
+
+
+rversion <- R.Version()[[13]]
+
+sysversion <- sessionInfo()[2]
+```
+
+
+
+```{r, echo=FALSE}
+library(caret)
+library(randomForest) 
+library(rpart) 
+library(rpart.plot)
+
+# setting the overall seed for reproduceability
+set.seed(1442)
+```
+
+####1 Data Loading & Explorating
+First we want to load the data sets into R 
+```{r}
+
+trainingDf<-read.csv("./pml-training.csv")
+dim(trainingDf)# Check number of variables and observations
+
+testDf<-read.csv("./pml-testing.csv")
+dim(testDf)# Check number of variables and observations
+
+
+```
+
+
+####2 Data Processing
+in this part we face 2 problems:a) the missing values and b) the fact that the data set contains irrelevant variables.
+
+#####a-) Processing missing values
+we decide to Delete columns that contains missing values.
+
+```{r}
+trainingDf<-trainingDf[,colSums(is.na(trainingDf)) == 0];dim(trainingDf)
+testDf <-testDf[,colSums(is.na(testDf)) == 0];dim(testDf)
+```
+
+
+#####b-) Processing irrelevant variables
+As the first 7 columns are non-numeric non-integer, we decide to delete them.
+```{r}
+trainingDf <-trainingDf[,-c(1:7)];dim(trainingDf)
+testDf <-testDf[,-c(1:7)];dim(testDf)
+```
+
+
+##### c) Adapting the columns of training and to testing data set
+
+ We now make sure that both sets have the same number of columns.
+ 
+```{r}
+a<-0
+colNames<-c()
+nomTr<-names(trainingDf);nomTest<-names(testDf)
+del<-setdiff( nomTest,trainingDf)
+for(i in 1:length(nomTr)){
+      if( nomTr[i] %in% nomTest){
+          name<- nomTr[i]
+          a<-a+1
+          colNames[a]<-name
+      }      
+}
+length(colNames)
+colNames<-append(colNames,"classe");
+trainingDf<-trainingDf[,colNames]
+dim(trainingDf)
+
+```
+
+
+####3 Creating training and test 
+
+In order to perform cross-validation, the training data set is partionned into 2 sets: subTraining (70%) and subTest (30%).
+This will be performed using random subsampling without replacement.
+```{r}
+subsamples <- createDataPartition(y=trainingset$classe, p=0.75, list=FALSE)
+subTraining <- trainingset[subsamples, ] 
+subTesting <- trainingset[-subsamples, ]
+dim(subTraining)
+dim(subTesting)
+head(subTraining)
+head(subTesting)
+```
+
