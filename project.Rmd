@@ -17,24 +17,19 @@ sysversion <- sessionInfo()[2]
 
 
 
-```{r, echo=FALSE}
-library(caret)
-library(randomForest) 
-library(rpart) 
-library(rpart.plot)
-
-# setting the overall seed for reproduceability
-set.seed(1442)
+```{r, }
+library(caret,quietly=TRUE)
+library(randomForest,quietly=TRUE) 
 ```
 
 ####1 Data Loading & Explorating
 First we want to load the data sets into R 
 ```{r}
 
-trainingDf<-read.csv("./pml-training.csv")
+trainingDf<-read.csv("./pml-training.csv", na.strings=c("", "NA", "NULL"))
 dim(trainingDf)# Check number of variables and observations
 
-testDf<-read.csv("./pml-testing.csv")
+testDf<-read.csv("./pml-testing.csv", na.strings=c("", "NA", "NULL"))
 dim(testDf)# Check number of variables and observations
 
 
@@ -85,17 +80,45 @@ dim(trainingDf)
 ```
 
 
-####3 Creating training and test 
-
-In order to perform cross-validation, the training data set is partionned into 2 sets: subTraining (70%) and subTest (30%).
-This will be performed using random subsampling without replacement.
+####3 Creating training and cross-validation sets
+We have modified the training data(trainingDf). Now we will split the object **trainingDf** into **"train.Sub.trainingDf"(70%)** and **“test.Sub.trainingDf”(30%)**.     
 ```{r}
-subsamples <- createDataPartition(y=trainingset$classe, p=0.75, list=FALSE)
-subTraining <- trainingset[subsamples, ] 
-subTesting <- trainingset[-subsamples, ]
-dim(subTraining)
-dim(subTesting)
-head(subTraining)
-head(subTesting)
+set.seed(1442)
+data <- createDataPartition(y=trainingDf$classe, p=0.70, list=FALSE)
+train.Sub.trainingDf <- trainingDf[data, ];dim(train)
+test.Sub.trainingDf<- trainingDf[-data, ];dim(test)
+
+```
+
+
+#### 4 Predicting Model
+
+predicting with random forest
+```{r}
+model <- randomForest(classe ~. , data=train.Sub.trainingDf, method="class")
+
+# perform the Prediction
+prediction <- predict(model2, test.Sub.trainingDf, type = "class")
+
+# Test the prediction:
+confusionMatrix(prediction, test.Sub.trainingDf$classe)
+
+```
+
+
+####5 Analizing the Error
+Decision
+
+As expected, Random Forest algorithm performed better than Decision Trees.
+Accuracy for Random Forest model was 0.995 (95% CI: (0.993, 0.997)) compared to 0.739 (95% CI: (0.727, 0.752)) for Decision Tree model. The random Forest model is choosen. The accuracy of the model is 0.995. The expected out-of-sample error is estimated at 0.005, or 0.5%. The expected out-of-sample error is calculated as 1 - accuracy for predictions made against the cross-validation set. Our Test data set comprises 20 cases. With an accuracy above 99% on our cross-validation data, we can expect that very few, or none, of the test samples will be missclassified.
+
+
+#### 
+
+
+```{r}
+# predict outcome levels on the original Testing data set using Random Forest algorithm
+endPrediction <- predict(model, testDf, type="class")
+endPrediction
 ```
 
