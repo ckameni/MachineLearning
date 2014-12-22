@@ -2,19 +2,11 @@
 title: "Project"
 author: "Kameni"
 date: "Sunday, December 21, 2014"
-output: word_document
+output: html_document
 ---
-```{r}
-Sys.setlocale(category = "LC_TIME", locale="English")
-
-time <- format(Sys.time(),"%a, %b %d %Y, %X")
-
-
-rversion <- R.Version()[[13]]
-
-sysversion <- sessionInfo()[2]
-```
-
+### Synopsis
+ One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, our goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+ The goal of the project is to predict the manner in which they did the exercice with the help of Machine Learning algorithm.
 
 
 ```{r, }
@@ -56,37 +48,13 @@ testDf <-testDf[,-c(1:7)];dim(testDf)
 ```
 
 
-##### c) Adapting the columns of training and to testing data set
-
- We now make sure that both sets have the same number of columns.
- 
-```{r}
-a<-0
-colNames<-c()
-nomTr<-names(trainingDf);nomTest<-names(testDf)
-del<-setdiff( nomTest,trainingDf)
-for(i in 1:length(nomTr)){
-      if( nomTr[i] %in% nomTest){
-          name<- nomTr[i]
-          a<-a+1
-          colNames[a]<-name
-      }      
-}
-length(colNames)
-colNames<-append(colNames,"classe");
-trainingDf<-trainingDf[,colNames]
-dim(trainingDf)
-
-```
-
-
 ####3 Creating training and cross-validation sets
 We have modified the training data(trainingDf). Now we will split the object **trainingDf** into **"train.Sub.trainingDf"(70%)** and **“test.Sub.trainingDf”(30%)**.     
 ```{r}
 set.seed(1442)
 data <- createDataPartition(y=trainingDf$classe, p=0.70, list=FALSE)
-train.Sub.trainingDf <- trainingDf[data, ];dim(train)
-test.Sub.trainingDf<- trainingDf[-data, ];dim(test)
+train.Sub.trainingDf <- trainingDf[data, ];dim(train.Sub.trainingDf)
+test.Sub.trainingDf<- trainingDf[-data, ];dim(test.Sub.trainingDf)
 
 ```
 
@@ -98,7 +66,7 @@ predicting with random forest
 model <- randomForest(classe ~. , data=train.Sub.trainingDf, method="class")
 
 # perform the Prediction
-prediction <- predict(model2, test.Sub.trainingDf, type = "class")
+prediction <- predict(model, test.Sub.trainingDf, type = "class")
 
 # Test the prediction:
 confusionMatrix(prediction, test.Sub.trainingDf$classe)
@@ -107,17 +75,19 @@ confusionMatrix(prediction, test.Sub.trainingDf$classe)
 
 
 ####5 Analizing the Error
-Decision
 
-As expected, Random Forest algorithm performed better than Decision Trees.
-Accuracy for Random Forest model was 0.995 (95% CI: (0.993, 0.997)) compared to 0.739 (95% CI: (0.727, 0.752)) for Decision Tree model. The random Forest model is choosen. The accuracy of the model is 0.995. The expected out-of-sample error is estimated at 0.005, or 0.5%. The expected out-of-sample error is calculated as 1 - accuracy for predictions made against the cross-validation set. Our Test data set comprises 20 cases. With an accuracy above 99% on our cross-validation data, we can expect that very few, or none, of the test samples will be missclassified.
+ -The accuracy of the model is 0.993(99,3%)
+ 
+ -The expected out-of-sample errorr based on our fitted model applied to the cross validation dataset is 0.007(0.7%).
 
 
-#### 
+ we can expect that very few, or  may be none, of the test samples will be missclassified with an accuracy above 99% on our cross-validation data.
 
+####6 Predicted Results
+
+Finally, we apply the Random Forest algorithm to the original testing dataset,to predict the outcome
 
 ```{r}
-# predict outcome levels on the original Testing data set using Random Forest algorithm
 endPrediction <- predict(model, testDf, type="class")
 endPrediction
 ```
